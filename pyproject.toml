@@ -1,15 +1,14 @@
 [project]
 name = "vector-db-utils"
 version = "0.1.0"
-description = "Custom Hugging Face TEI client"
+description = "Custom Qdrant client"
 authors = [{name = "Oleg Sidorov", email = "sidorov.works@yandex.ru"}]
 license = {text = "MIT"}
 readme = "readme.md"
 requires-python = ">=3.9"
 dependencies = [
-    "httpx>=0.28.1",
-    "pydantic>=2.12.5",
-    "http-utils @ git+https://github.com/sidorov-works/http_utils.git@v0.1.0"
+    "qdrant-client>=1.17.0", 
+    "pydantic>=2.12.5"       
 ]
 
 [project.optional-dependencies]

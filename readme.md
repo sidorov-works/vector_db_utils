@@ -1,164 +1,155 @@
-# TEI Utils
+# vector-db-utils
 
-Асинхронный Python клиент для одновременных запросов к нескольким TEI-серверам (Hugging Face Text Embeddings Inference).
+Асинхронный Python клиент для работы с Qdrant векторной базой данных с поддержкой именованных векторов.
 
-## Ключевая особенность
+## Особенности
 
-**Работа с несколькими TEI серверами одновременно** — клиент позволяет объединить несколько моделей эмбеддингов в одном интерфейсе и получать векторы от всех моделей параллельно за один вызов.
-
-```python
-# Один клиент — несколько моделей
-client = EncoderClient(
-    encoders={
-        "bge-small": "http://localhost:8080",   # быстрая модель
-        "bge-large": "http://localhost:8081",   # точная модель
-        "e5-mistral": "http://localhost:8082"   # мультиязычная
-    },
-    secret="your-secret"
-)
-
-# Получаем эмбеддинги от всех моделей одновременно
-vectors = await client.encode_text("Hello world")
-# {
-#     "bge-small": [0.1, 0.2, ...],   # 384-dim
-#     "bge-large": [0.3, 0.4, ...],   # 1024-dim
-#     "e5-mistral": [0.5, 0.6, ...]   # 4096-dim
-# }
-```
+- **Именованные векторы** — поддержка нескольких векторов в одной точке
+- **Асинхронный** — полностью `async/await` интерфейс
+- **Автоматические повторные попытки** — экспоненциальная задержка при ошибках
+- **Ленивое подключение** — соединение создается при первом запросе
 
 ## Установка
 
 ```bash
-pip install git+https://github.com/sidorov-works/tei_utils.git@v0.1.2
+pip install git+https://github.com/your-username/vector-db-utils.git@v0.1.0
 ```
 
-## Инициализация клиента
+## Быстрый старт
 
 ```python
-from tei_utils import EncoderClient, PromptType
+import asyncio
+from vector_db_utils import QdrantClient, VectorConfig, Chunk
 
-client = EncoderClient(
-    # Словарь энкодеров: имя -> URL
-    encoders={
-        "bge-small": "http://localhost:8080",     # локальный TEI
-        "bge-large": "http://localhost:8081",     # другой порт
-        "e5-mistral": "https://tei.example.com"   # удаленный сервер
-    },
+async def main():
+    # Создание клиента
+    client = QdrantClient(
+        host="localhost",
+        grpc_port=6334,
+        grpc_enabled=True,
+        scroll_point_limit=100
+    )
     
-    # Секретный ключ для Bearer аутентификации
-    secret="your-secret-key",
+    # Конфигурация векторов
+    vectors_config = {
+        "bge-small": VectorConfig(size=384, distance="Cosine"),
+        "bge-large": VectorConfig(size=1024, distance="Cosine")
+    }
     
-    # Таймаут на один HTTP запрос (секунды)
-    request_timeout=30.0,
+    # Создание коллекции
+    await client.create_collection("my_collection", vectors_config)
     
-    # Общий таймаут с учетом всех повторных попыток
-    total_timeout=60.0
+    # Вставка точек
+    points = [{
+        "id": "point_1",
+        "vector": {
+            "bge-small": [0.1, 0.2, ...],
+            "bge-large": [0.3, 0.4, ...]
+        },
+        "payload": {"text": "Hello world", "tags": ["greeting"]}
+    }]
+    
+    inserted = await client.upsert_points("my_collection", points)
+    print(f"Inserted {inserted} points")
+    
+    # Поиск
+    results = await client.search_by_tags_or(
+        collection_name="my_collection",
+        query_vector=[0.1, 0.2, ...],
+        vector_name="bge-small",
+        tenant_id="tenant_1",
+        tags=["greeting"],
+        limit=10
+    )
+    
+    for result in results:
+        print(f"Score: {result['score']}, Content: {result['payload']['text']}")
+    
+    # Закрытие
+    await client.close()
+
+asyncio.run(main())
+```
+
+## API
+
+### QdrantClient
+
+#### Конструктор
+```python
+QdrantClient(
+    host: str = "localhost",
+    grpc_port: int = 6334,
+    grpc_enabled: bool = True,
+    http_port: int = 6333,
+    connection_timeout: float = 30.0,
+    upsert_batch_size: int = 64,
+    scroll_point_limit: int = 64
 )
 ```
 
-**Важно:**
-- URL энкодеров должны указывать на корень TEI сервиса (например, `http://localhost:8080`)
-- Все энкодеры используют единый секретный ключ для Bearer аутентификации
-- Клиент автоматически запрашивает `/info` при первом обращении к энкодеру
-- Информация об энкодере (размерность вектора, максимальная длина) кэшируется
+#### Операции с коллекциями
+- `collection_exists(collection_name: str) -> bool`
+- `create_collection(collection_name: str, vectors_config: Dict[str, VectorConfig]) -> bool`
+- `delete_collection(collection_name: str) -> bool`
+- `get_collection_info(collection_name: str) -> Optional[Dict]`
+- `add_vectors_to_collection(collection_name: str, vectors_config: Dict[str, VectorParams]) -> bool`
 
-## Использование
+#### Операции с точками
+- `upsert_points(collection_name: str, points: List[Dict]) -> int`
+- `upsert_chunks(collection_name: str, chunks: List[Chunk], document_name: str, tenant_id: str) -> int`
+- `point_exists(collection_name: str, point_id: str) -> bool`
+- `scroll_points(collection_name: str, filter: Optional[Filter] = None, offset=None) -> Tuple[List[Dict], Optional[Any]]`
+- `delete_points_by_filter(collection_name: str, filter: Filter) -> bool`
+- `remove_vector_completely(collection_name: str, vector_name: str) -> bool`
 
-### Кодирование текстов
+#### Поиск
+- `search_by_tags_or(collection_name: str, query_vector: List[float], vector_name: str, tenant_id: str, tags: Optional[List[str]] = None, limit: int = 10, score_threshold: float = 0.5) -> List[Dict]`
 
+#### Вспомогательные методы
+- `build_tenant_filter(tenant_id: str) -> Filter`
+- `build_document_filter(tenant_id: str, document_name: str) -> Filter`
+- `build_tag_filter(tenant_id: str, tag: str) -> Filter`
+- `build_tags_and_filter(tenant_id: str, tags: List[str]) -> Filter`
+- `get_unique_field_values(collection_name: str, field_name: str, scroll_limit: Optional[int] = None) -> Tuple[set, int]`
+
+#### Управление соединением
+- `health_check() -> bool`
+- `get_stats() -> Dict[str, Any]`
+- `close() -> None`
+
+### Модели
+
+#### VectorConfig
 ```python
-# Одиночный текст
-result = await client.encode_text("What is machine learning?")
-# {
-#     "bge-small": [0.12, -0.34, ...],   # один вектор
-#     "bge-large": [0.56, -0.78, ...]    # один вектор
-# }
-
-# Пакет текстов
-texts = [
-    "Machine learning is...",
-    "Deep learning is...",
-    "Neural networks..."
-]
-batch_result = await client.encode_batch(texts)
-# {
-#     "bge-small": [[...], [...], [...]],   # три вектора
-#     "bge-large": [[...], [...], [...]]    # три вектора
-# }
-
-# С указанием типа промпта (для моделей, обученных на пары query/document)
-query_vector = await client.encode_text(
-    "search query",
-    prompt_type=PromptType.QUERY
-)
-doc_vector = await client.encode_text(
-    "document text",
-    prompt_type=PromptType.DOCUMENT
-)
+class VectorConfig(BaseModel):
+    size: int
+    distance: str  # "Cosine", "Euclid", "Dot"
 ```
 
-### Подсчет токенов
-
+#### Chunk
 ```python
-# Одиночный текст
-tokens = await client.count_tokens("Hello world")
-# {"bge-small": 2, "bge-large": 2}
-
-# Пакет текстов
-tokens_batch = await client.count_tokens_batch(["Hello", "World", "!"])
-# {"bge-small": [1, 1, 1], "bge-large": [1, 1, 1]}
+class Chunk(BaseModel):
+    content: str
+    vectors: Dict[str, List[float]]
+    title: Optional[str] = None
+    topics: Optional[List[str]] = None
+    original_index: Optional[int] = None
 ```
 
-### Работа с отдельными энкодерами
-
+### Нормализация тегов
 ```python
-# Получить информацию только для конкретной модели
-dimension = await client.get_vector_size("bge-small")     # 384
-max_length = await client.get_max_length("bge-small")     # 512
-model_name = await client.get_model_name("bge-small")     # "BAAI/bge-small-en-v1.5"
+from vector_db_utils import normalize_tag, normalize_tag_set
 
-# Проверка доступности
-is_healthy = await client.health_check("bge-small")       # True/False
-all_healthy = await client.health_check_all()             # {"bge-small": True, ...}
-
-# Использовать только определенные энкодеры
-vectors = await client.encode_text(
-    "Hello",
-    use_encoders=["bge-small"]  # только эта модель
-)
+normalize_tag("My Tag!")        # "my_tag"
+normalize_tag_set(["Tag1", "Tag2"])  # ["tag1", "tag2"]
 ```
-
-### Обработка ошибок
-
-```python
-# Клиент возвращает None для недоступных энкодеров
-vectors = await client.encode_text("Hello")
-# {
-#     "bge-small": [0.1, 0.2, ...],  # доступен
-#     "bge-large": None              # недоступен
-# }
-
-# Проверяйте наличие результата
-if vectors["bge-large"] is None:
-    print("BGE Large is not available")
-```
-
-## Особенности
-
-- 🔄 **Автоматический батчинг** — клиент сам разбивает большие списки текстов на части, учитывая `max_client_batch_size` из `/info`
-- ⚡ **Параллельные запросы** — при работе с несколькими энкодерами запросы выполняются одновременно
-- 🔁 **Повторные попытки** — экспоненциальная задержка с jitter для сетевых ошибок и 5xx/429 статусов
-- 💾 **Ленивая инициализация** — HTTP клиенты создаются только при первом обращении к энкодеру
-- 🔐 **Bearer аутентификация** — автоматическое добавление `Authorization: Bearer <secret>` к каждому запросу
-- 📝 **Pydantic валидация** — строгая типизация запросов и ответов TEI
-- 🏥 **Health check перед запросами** — клиент проверяет доступность энкодеров перед отправкой
 
 ## Требования
 
 - Python >= 3.9
-- `httpx >= 0.28.1` — HTTP клиент
-- `pydantic >= 2.12.5` — валидация данных
-- `http-utils` — обертка с ретраями и аутентификацией
+- `qdrant-client >= 1.17.0`
+- `pydantic >= 2.12.5`
 
 ## Лицензия
 
