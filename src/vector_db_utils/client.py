@@ -65,6 +65,7 @@ class QdrantClient:
     def __init__(
             self,
             qdrant_host: str = "localhost", # Хост без протокола!
+            api_key: Optional[str] = None,  # Статический API ключ
             grpc_port: int = 6334,
             grpc_enabled: bool = True,
             http_port: int = 6333,
@@ -76,11 +77,12 @@ class QdrantClient:
         self._connection_lock = asyncio.Lock()
         
         # Параметры соединения 
+        self._host = qdrant_host
+        self._api_key = api_key
         self._connection_timeout = connection_timeout
         self._grpc_enabled = grpc_enabled
         self._grpc_port = grpc_port
         self._http_port = http_port
-        self._host = qdrant_host
 
         # Настройки батчевых операций
         self._upsert_batch_size = upsert_batch_size
@@ -117,6 +119,7 @@ class QdrantClient:
                 if self._grpc_enabled:
                     self._client = AsyncQdrantClient(
                         host=self._host,
+                        api_key=self._api_key,
                         grpc_port=self._grpc_port,
                         prefer_grpc=True,
                         timeout=self._connection_timeout,
