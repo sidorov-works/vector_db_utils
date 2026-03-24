@@ -15,7 +15,7 @@ from qdrant_client.models import (
     PointStruct,
     MinShould
 )
-from models import Chunk, VectorConfig
+from .models import Chunk, VectorConfig
 from typing import List, Dict, Any, Optional, Callable, Set, Tuple
 import asyncio
 import time
