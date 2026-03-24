@@ -739,7 +739,6 @@ class QdrantClient:
             batch, offset = await self.scroll_points(
                 collection_name=collection_name,
                 filter=None,
-                limit=self._scroll_point_limit,
                 offset=offset
             )
             if not batch:
@@ -945,7 +944,6 @@ class QdrantClient:
             batch, offset = await self.scroll_points(
                 collection_name=collection_name,
                 filter=None,
-                limit=self._scroll_point_limit,
                 offset=offset
             )
             
