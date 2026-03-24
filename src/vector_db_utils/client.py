@@ -232,7 +232,6 @@ class QdrantClient:
                 return {
                     "name": collection_name,
                     "points_count": info.points_count,
-                    "vectors_count": info.vectors_count or 0,
                     "segments_count": info.segments_count,
                     "status": info.status,
                     "config": info.config.model_dump()
@@ -240,6 +239,10 @@ class QdrantClient:
         except Exception as e:
             logger.error(f"Error getting collection info for {collection_name}: {e}")
             return None
+        
+    async def get_vectors_config(self, collection_name: str) -> Optional[Dict]:
+        collection_info = await self.get_collection_info(collection_name)
+        return collection_info.get("config", {}).get("params", {}).get("vectors", {})
 
     @retry_on_failure(max_retries=2)
     async def add_vectors_to_collection(
