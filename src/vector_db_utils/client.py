@@ -631,15 +631,15 @@ class QdrantClient:
                 return False
 
     async def search_by_tags_or(
-        self,
-        collection_name: str,
-        query_vector: List[float],
-        vector_name: str,
-        tenant_id: str,
-        tags: Optional[List[str]] = None,
-        limit: int = 10,
-        score_threshold: float = 0.5
-    ) -> List[Dict[str, Any]]:
+    self,
+    collection_name: str,
+    query_vector: List[float],
+    vector_name: str,
+    tenant_id: str,
+    tags: Optional[List[str]] = None,
+    limit: int = 10,
+    score_threshold: float = 0.5
+) -> List[Dict[str, Any]]:
         """
         Поиск точек с OR-фильтрацией по тегам, используя указанный вектор.
         
@@ -659,6 +659,7 @@ class QdrantClient:
             async with self.operation_context("search_by_tags_or"):
                 client = await self.get_client()
                 
+                # Формируем условия фильтрации
                 must_conditions = [
                     FieldCondition(key="tenant", match=MatchValue(value=tenant_id))
                 ]
@@ -676,15 +677,22 @@ class QdrantClient:
                 else:
                     search_filter = Filter(must=must_conditions)
                 
-                results = await client.search(
+                # Используем query_points
+                response = await client.query_points(
                     collection_name=collection_name,
-                    query_vector=(vector_name, query_vector),
-                    query_filter=search_filter,
-                    limit=limit,
-                    score_threshold=score_threshold,
-                    with_vectors=False,
+                    query=query_vector,             # вектор запроса
+                    using=vector_name,              # имя вектора для поиска
+                    query_filter=search_filter,     # фильтр
+                    limit=limit,                    # лимит результатов
+                    score_threshold=score_threshold,# порог релевантности
+                    with_payload=True,              # возвращаем payload
+                    with_vectors=False              # не возвращаем векторы (экономия памяти)
                 )
                 
+                # response.points содержит список результатов
+                results = response.points
+                
+                # Преобразуем в удобный формат
                 return [{
                     "id": hit.id,
                     "score": hit.score,
