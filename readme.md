@@ -12,7 +12,7 @@
 ## Установка
 
 ```bash
-pip install git+https://github.com/sidorov-works/vector_db_utils.git@v0.1.6
+pip install git+https://github.com/sidorov-works/vector_db_utils.git@v0.1.7
 ```
 
 ## Быстрый старт

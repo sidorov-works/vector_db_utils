@@ -92,7 +92,7 @@ class VBDClient:
         self._total_requests = 0
         self._failed_requests = 0
         
-        logger.debug("QdrantClient initialized")
+        logger.debug("VDBClient initialized")
 
     # ----------------------------------------------------------------------
     # Управление соединением
