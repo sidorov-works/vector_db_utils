@@ -52,7 +52,7 @@ def retry_on_failure(max_retries: int = 3, base_delay: float = 0.5):
 
 class VDBClient:
     """
-    Клиент для работы с Qdrant векторной БД.
+    Клиент для работы с векторной БД (Qdrant).
     
     Особенности:
     - Ленивое подключение с автоматическим переподключением
@@ -64,7 +64,7 @@ class VDBClient:
     
     def __init__(
             self,
-            qdrant_host: str = "localhost", # Хост без протокола!
+            vdb_host: str = "localhost", # Хост без протокола!
             api_key: Optional[str] = None,  # Статический API ключ
             grpc_port: int = 6334,
             grpc_enabled: bool = True,
@@ -77,7 +77,7 @@ class VDBClient:
         self._connection_lock = asyncio.Lock()
         
         # Параметры соединения 
-        self._host = qdrant_host
+        self._host = vdb_host
         self._api_key = api_key
         self._connection_timeout = connection_timeout
         self._grpc_enabled = grpc_enabled
