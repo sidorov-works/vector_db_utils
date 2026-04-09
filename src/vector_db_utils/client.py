@@ -50,7 +50,7 @@ def retry_on_failure(max_retries: int = 3, base_delay: float = 0.5):
     return decorator
 
 
-class QdrantClient:
+class VBDClient:
     """
     Клиент для работы с Qdrant векторной БД.
     

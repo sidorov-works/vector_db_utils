@@ -12,18 +12,18 @@
 ## Установка
 
 ```bash
-pip install git+https://github.com/sidorov-works/vector_db_utils.git@v0.1.5
+pip install git+https://github.com/sidorov-works/vector_db_utils.git@v0.1.6
 ```
 
 ## Быстрый старт
 
 ```python
 import asyncio
-from vector_db_utils import QdrantClient, VectorConfig, Chunk
+from vector_db_utils import VDBClient, VectorConfig, Chunk
 
 async def main():
     # Создание клиента
-    client = QdrantClient(
+    client = VDBClient(
         host="localhost",
         grpc_port=6334,
         grpc_enabled=True,
@@ -73,11 +73,11 @@ asyncio.run(main())
 
 ## API
 
-### QdrantClient
+### VDBClient
 
 #### Конструктор
 ```python
-QdrantClient(
+VDBClient(
     host: str = "localhost",
     grpc_port: int = 6334,
     grpc_enabled: bool = True,
