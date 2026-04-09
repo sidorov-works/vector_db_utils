@@ -69,7 +69,7 @@ class VDBClient:
             grpc_port: int = 6334,
             grpc_enabled: bool = True,
             http_port: int = 6333,
-            connection_timeout: float = 30.0,
+            request_timeout: float = 30.0,
             upsert_batch_size: int = 64,
             scroll_point_limit: int = 64
         ):
@@ -79,7 +79,7 @@ class VDBClient:
         # Параметры соединения 
         self._host = vdb_host
         self._api_key = api_key
-        self._connection_timeout = connection_timeout
+        self._request_timeout = request_timeout
         self._grpc_enabled = grpc_enabled
         self._grpc_port = grpc_port
         self._http_port = http_port
@@ -122,7 +122,7 @@ class VDBClient:
                         api_key=self._api_key,
                         grpc_port=self._grpc_port,
                         prefer_grpc=True,
-                        timeout=self._connection_timeout,
+                        timeout=self._request_timeout,
                         check_compatibility=False,
                     )
                     logger.info(f"Connected via gRPC: {self._host}:{self._grpc_port}")
@@ -130,7 +130,7 @@ class VDBClient:
                     self._client = AsyncQdrantClient(
                         url=f"http://{self._host}:{self._http_port}",
                         prefer_grpc=False,
-                        timeout=self._connection_timeout,
+                        timeout=self._request_timeout,
                         check_compatibility=False,
                     )
                     logger.info(f"Connected via HTTP: {self._host}:{self._http_port}")
